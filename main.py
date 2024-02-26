@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+import time
 
 pygame.init()
 FPS = 50
@@ -9,6 +10,7 @@ size = WIDTH, HEIGHT = 600, 600
 screen = pygame.display.set_mode(size)
 all_sprites = pygame.sprite.Group()
 clock = pygame.time.Clock()
+t0 = time.time()
 
 
 def load_image(name, colorkey=None):
@@ -63,6 +65,33 @@ def start_screen():
         clock.tick(FPS)
 
 
+def finish_screen():
+    intro_text = open('data/res.txt').readlines()[1:]
+
+    fon = pygame.transform.scale(load_image('fon.jpg'), (WIDTH, HEIGHT))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN or \
+                    event.type == pygame.MOUSEBUTTONDOWN:
+                return  # начинаем игру
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 def load_level(filename):
     filename = "data/" + filename
     # читаем уровень, убирая символы перевода строки
@@ -81,7 +110,8 @@ tile_images = {
     'empty': load_image('grass.png'),
     'portal': load_image('portal.png')
 }
-player_image = load_image('hero.png')
+player_image = load_image('hero1.png')
+buu_image = load_image('hero.png')
 tile_width = tile_height = 50
 tile_qroup = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
@@ -102,11 +132,22 @@ class Tile(pygame.sprite.Sprite):
 player_group = pygame.sprite.Group()
 player = None
 
+buu_group = pygame.sprite.Group()
+buug = []
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x + 7, tile_height * pos_y + 5)
+
+
+class Buu(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(buu_group, all_sprites)
+        self.image = buu_image
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 7, tile_height * pos_y + 5)
 
@@ -125,15 +166,19 @@ def generate_level(level):
             elif level[y][x] == '8':
                 Tile('empty', x, y)
                 Tile('portal', x, y)
+            elif level[y][x] == '^':
+                # Tile('empty', x, y)
+                buug.append([Buu(x, y), True])
     # вернем игрока, а также размер поля в клетках
     return new_player, x, y
 
 
 def newlvl(name):
-
     global tile_qroup
     global wall_group
     global portal_group
+    global buug
+    global buu_group
     tile_qroup = pygame.sprite.Group()
     wall_group = pygame.sprite.Group()
     portal_group = pygame.sprite.Group()
@@ -142,38 +187,134 @@ def newlvl(name):
     player_group = pygame.sprite.Group()
     player = None
 
+    buu_group = pygame.sprite.Group()
+    buug = []
+
     running = True
     player, level_x, level_y = generate_level(load_level(name + '.txt'))
+
+    lifes = 3
+
     while running:
+        buu_group.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if player is not None:
                 if pygame.sprite.spritecollideany(player, wall_group) is None:
+                    for i in buug:
+                        if i[1]:
+                            i[0].rect.top += 1
+                            if pygame.sprite.spritecollideany(i[0], wall_group):
+                                i[0].rect.top -= 1
+                                i[1] = False
+                        else:
+                            i[0].rect.top -= 1
+                            if pygame.sprite.spritecollideany(i[0], wall_group):
+                                i[0].rect.top += 1
+                                i[1] = True
+
+                    if pygame.sprite.spritecollideany(player, buu_group):
+
+                        lifes -= 1
+                        if lifes != 0:
+                            player_group = pygame.sprite.Group()
+                            player = None
+                            tile_qroup = pygame.sprite.Group()
+                            wall_group = pygame.sprite.Group()
+                            portal_group = pygame.sprite.Group()
+                            buug = []
+                            buu_group = pygame.sprite.Group()
+
+                            player, level_x, level_y = generate_level(load_level(name + '.txt'))
+                        else:
+                            running = False
+
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:
                         player.rect.top += 50
                         if pygame.sprite.spritecollideany(player, wall_group):
                             player.rect.top -= 50
                         if pygame.sprite.spritecollideany(player, portal_group):
-                            player, level_x, level_y = generate_level(load_level(name[:-1] + str(int(name[-1])+1) + '.txt'))
+                            if name == 'lwvel4':
+                                f = open('data/res.txt', 'r+')
+                                f.writelines(f'{int(f.readlines()[-1].split()[0]) + 1} {int(time.time() - t0)}' + '\n')
+                                f.close()
+                                running = False
+                            else:
+                                player_group = pygame.sprite.Group()
+                                player = None
+                                tile_qroup = pygame.sprite.Group()
+                                wall_group = pygame.sprite.Group()
+                                portal_group = pygame.sprite.Group()
+                                buug = []
+                                buu_group = pygame.sprite.Group()
+                                name = name[:-1] + str(int(name[-1]) + 1)
+
+                                player, level_x, level_y = generate_level(load_level(name + '.txt'))
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
                         player.rect.top -= 50
                         if pygame.sprite.spritecollideany(player, wall_group):
                             player.rect.top += 50
                         if pygame.sprite.spritecollideany(player, portal_group):
-                            player, level_x, level_y = generate_level(load_level('lwvel1.txt'))
+
+                            if name == 'lwvel4':
+                                f = open('data/res.txt', 'r+')
+                                f.writelines(f'{int(f.readlines()[-1].split()[0]) + 1} {int(time.time() - t0)}' + '\n')
+                                f.close()
+                                running = False
+                            else:
+                                player_group = pygame.sprite.Group()
+                                player = None
+                                tile_qroup = pygame.sprite.Group()
+                                wall_group = pygame.sprite.Group()
+                                portal_group = pygame.sprite.Group()
+                                buug = []
+                                buu_group = pygame.sprite.Group()
+                                name = name[:-1] + str(int(name[-1]) + 1)
+
+                                player, level_x, level_y = generate_level(load_level(name + '.txt'))
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
                         player.rect.left -= 50
                         if pygame.sprite.spritecollideany(player, wall_group):
                             player.rect.left += 50
                         if pygame.sprite.spritecollideany(player, portal_group):
-                            player, level_x, level_y = generate_level(load_level('lwvel1.txt'))
+                            if name == 'lwvel4':
+                                f = open('data/res.txt', 'r+')
+                                f.writelines(f'{int(f.readlines()[-1].split()[0]) + 1} {int(time.time() - t0)}' + '\n')
+                                f.close()
+                                running = False
+                            else:
+                                player_group = pygame.sprite.Group()
+                                player = None
+                                tile_qroup = pygame.sprite.Group()
+                                wall_group = pygame.sprite.Group()
+                                portal_group = pygame.sprite.Group()
+                                buug = []
+                                buu_group = pygame.sprite.Group()
+                                name = name[:-1] + str(int(name[-1]) + 1)
+
+                                player, level_x, level_y = generate_level(load_level(name + '.txt'))
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
                         player.rect.left += 50
                         if pygame.sprite.spritecollideany(player, wall_group):
                             player.rect.left -= 50
                         if pygame.sprite.spritecollideany(player, portal_group):
-                            player, level_x, level_y = generate_level(load_level('lwvel1.txt'))
+                            if name == 'lwvel4':
+                                f = open('data/res.txt', 'r+')
+                                f.writelines(f'{int(f.readlines()[-1].split()[0]) + 1} {int(time.time() - t0)}' + '\n')
+                                f.close()
+                                running = False
+                            else:
+                                player_group = pygame.sprite.Group()
+                                player = None
+                                tile_qroup = pygame.sprite.Group()
+                                wall_group = pygame.sprite.Group()
+                                portal_group = pygame.sprite.Group()
+                                buug = []
+                                buu_group = pygame.sprite.Group()
+                                name = name[:-1] + str(int(name[-1]) + 1)
+
+                                player, level_x, level_y = generate_level(load_level(name + '.txt'))
         screen.fill((255, 255, 255))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -186,4 +327,8 @@ def newlvl(name):
 if __name__ == '__main__':
     start_screen()
     newlvl('lwvel2')
+    finish_screen()
     pygame.quit()
+
+
+# сделат чтобы гриб двигался постоянно и чтобы не пропадал в текстурах и строки дописать
