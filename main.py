@@ -46,7 +46,7 @@ def start_screen():
     font = pygame.font.Font(None, 30)
     text_coord = 50
     for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
+        string_rendered = font.render(line, 1, pygame.Color('white'))
         intro_rect = string_rendered.get_rect()
         text_coord += 10
         intro_rect.top = text_coord
@@ -73,7 +73,7 @@ def finish_screen():
     font = pygame.font.Font(None, 30)
     text_coord = 50
     for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
+        string_rendered = font.render(line, 1, pygame.Color('white'))
         intro_rect = string_rendered.get_rect()
         text_coord += 10
         intro_rect.top = text_coord
@@ -167,7 +167,7 @@ def generate_level(level):
                 Tile('empty', x, y)
                 Tile('portal', x, y)
             elif level[y][x] == '^':
-                # Tile('empty', x, y)
+                Tile('empty', x, y)
                 buug.append([Buu(x, y), True])
     # вернем игрока, а также размер поля в клетках
     return new_player, x, y
@@ -196,23 +196,23 @@ def newlvl(name):
     lifes = 3
 
     while running:
+        for i in buug:
+            if i[1]:
+                i[0].rect.top += 1
+                if pygame.sprite.spritecollideany(i[0], wall_group):
+                    i[0].rect.top -= 1
+                    i[1] = False
+            else:
+                i[0].rect.top -= 1
+                if pygame.sprite.spritecollideany(i[0], wall_group):
+                    i[0].rect.top += 1
+                    i[1] = True
         buu_group.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if player is not None:
                 if pygame.sprite.spritecollideany(player, wall_group) is None:
-                    for i in buug:
-                        if i[1]:
-                            i[0].rect.top += 1
-                            if pygame.sprite.spritecollideany(i[0], wall_group):
-                                i[0].rect.top -= 1
-                                i[1] = False
-                        else:
-                            i[0].rect.top -= 1
-                            if pygame.sprite.spritecollideany(i[0], wall_group):
-                                i[0].rect.top += 1
-                                i[1] = True
 
                     if pygame.sprite.spritecollideany(player, buu_group):
 
@@ -320,6 +320,7 @@ def newlvl(name):
         all_sprites.update()
         tile_qroup.draw(screen)
         player_group.draw(screen)
+        buu_group.draw(screen)
         clock.tick(FPS)
         pygame.display.flip()
 
@@ -329,6 +330,3 @@ if __name__ == '__main__':
     newlvl('lwvel2')
     finish_screen()
     pygame.quit()
-
-
-# сделат чтобы гриб двигался постоянно и чтобы не пропадал в текстурах и строки дописать
