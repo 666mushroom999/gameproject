@@ -185,6 +185,11 @@ def newlvl(name):
     wall_group = pygame.sprite.Group()
     portal_group = pygame.sprite.Group()
 
+    ha = []
+    for i in range(10):
+        ha.append(load_image(str(i) + '.png'))
+    # ha = [pygame.transform.scale(load_image(str(i) + '.png'), (300, 300)) for i in range(10)]
+
     global player, player_group
     player_group = pygame.sprite.Group()
     player = None
@@ -198,6 +203,7 @@ def newlvl(name):
     lifes = 3
 
     while running:
+
         for i in buug:
             if i[1]:
                 i[0].rect.top += 1
@@ -210,6 +216,14 @@ def newlvl(name):
                     i[0].rect.top += 1
                     i[1] = True
         buu_group.update()
+
+        k = 0
+        screen.blit(ha[k], (10, 10))
+        if k == 9:
+            k = 0
+        else:
+            k += 1
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
