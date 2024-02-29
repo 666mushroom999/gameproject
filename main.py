@@ -161,6 +161,7 @@ def generate_level(level):
             if level[y][x] == '.':
                 Tile('empty', x, y)
             elif level[y][x] == '#':
+                Tile('empty', x, y)
                 Tile('wall', x, y)
             elif level[y][x] == '@':
                 Tile('empty', x, y)
